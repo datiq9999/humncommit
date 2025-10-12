@@ -1,0 +1,38 @@
+name: daily-commit
+
+on:
+  schedule:
+    # Chạy mỗi ngày 07:00 VN (00:00 UTC)
+    - cron: "0 0 * * *"
+  workflow_dispatch: {}   # Cho phép bấm chạy thủ công
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-commit
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make a tiny change
+        run: |
+          echo "$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> heartbeat.log
+          echo "tick" > .keep
+
+      - name: Commit if changed
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chore: daily heartbeat $(date -u +'%Y-%m-%d')"
+            git push
+          else
+            echo "No changes to commit"
+          fi
